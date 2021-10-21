@@ -7,5 +7,9 @@ ExcelでVBAの勉強のために、マインスイーパーを作成した時の
 ※再現する場合はセルの配置やボタンの作成も必要となるため、  
 　これからマインスイーパーを作成したい方には不親切ですが、  
 　一応、ゲーム画面のスクリーンショットも添付しておきます。  
-　（sheet2の画像はありませんが、ゲーム画面と同じ座標に地雷マップシートを作成しています）  
-![mine_sc](https://user-images.githubusercontent.com/58933271/138200949-406575a3-993e-4fa0-9f97-335b5a6e1c89.jpg)
+　（sheet2にはゲーム画面と同じ座標に地雷マップシートを作成しています）  
+
+
+![mine_sc1](https://user-images.githubusercontent.com/58933271/138201425-964e231b-0363-4a7f-8018-83aa917934c0.jpg)
+
+![mine_sc2](https://user-images.githubusercontent.com/58933271/138201448-69e02774-7ed0-4aca-bf2b-0e3f78b14b3a.jpg)

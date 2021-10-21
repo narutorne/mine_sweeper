@@ -1,3 +1,5 @@
+'VBAプロジェクト内のMicrosoft Excelのsheet1に以下のコードを記述します。
+
 Option Explicit
 
 '＝＝動作の説明＝＝

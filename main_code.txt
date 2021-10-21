@@ -1,4 +1,4 @@
-'標準モジュールのGeneralに以下のコードを記述します。
+'VBAプロジェクト内の標準モジュールに以下のコードを記述します。
 
 Declare PtrSafe Function GetAsyncKeyState Lib "User32.dll" (ByVal vKey As Long) As Integer
 

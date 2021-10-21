@@ -1,0 +1,267 @@
+Option Explicit
+
+'＝＝動作の説明＝＝
+'右クリック：フラグ表示（* ⇒ - ⇒ 非表示）
+'左クリック：パネルを開く。爆弾があった場合は終了処理。爆弾がなかった場合は周囲
+'爆弾の数が0の場合、再帰呼び出しで周囲のパネルも開く
+
+
+
+'マインスイーパープログラムの本体
+
+Private Sub Worksheet_SelectionChange(ByVal Target As Range)  '//セルを選択すると始動する専用の関数で　セルを選択するたびに実行されます
+
+    '//使用する変数の宣言
+    Dim i As Integer  '//あとで行うループ処理に変数 i を定義しておく Integerは整数型
+    Dim j As Integer  '//同じく j を宣言
+    
+    '/20×20の枠内がクリックされたときのみ動作するようにする
+    If Target.Row > 1 And Target.Row < 22 Then  '//Target.Rowは選択されたセルの行番号　もし1 < 行番号 < 22（ゲーム画面内）なら、
+        If Target.Column > 1 And Target.Column < 22 Then  '//同じくColumnは列番号、クリックしたセルがゲーム画面内なら以下を実行する
+        
+                
+                If CLI_Right = True Then '//右クリック時//
+                        GoTo EXT  '//右クリック時の処理は他の関数が動くので、こちらの関数ではGoTo EXt(終了処理)をする
+                
+                Else '//右クリック以外の時//
+                '//パネルを開く
+                    '//パネルが未開封であることの確認
+                    If Target.Interior.ColorIndex = 2 Then  '//Target(選択セル）のInterior(セルの背景情報）のColorIndex(色）が2(白色)なら
+                    
+                        '///対象セルに爆弾があった場合///
+                        If Sheet2.Cells.Range(Target.Address).Value = "●" Then  '//Sheet2には地雷の情報があります。
+                                                                                 '//Target（選択セル）と同じ位置のsheet2のセルが●なら
+                            Target.Value = "●"  '//Sheet1のTargetセルの値にも●を代入して●を表示します
+                            Target.Interior.ColorIndex = 15  '//Targetのセルをグレー色にします。パネル開封済のマーキング
+
+                            Call game_over(ActiveCell)  '//ゲームオーバー関数を呼び出します
+                            GoTo EXT  '//この関数を終了します
+
+                    Else '///対象セルに爆弾がなかった場合///
+                        '対象セルに周囲の爆弾の数を入力
+                        Target.Value = bomb_check(Sheet2.Cells.Range(Target.Address))  '//ボムチェック関数を呼び出して周囲の爆弾数をTarget.Valueに入力
+                        
+                        If Target.Value = 0 Then  '//周囲のボム数が0だった場合、0を表示しない処理
+                            Target.Value = ""  '//入力されている0を空欄にします
+                        End If
+                        
+                        Target.Interior.ColorIndex = 15  '//Targetのセルをグレー色にします。パネル開封済のマーキング
+                        Sheet2.Range("W2").Value = Int(Sheet2.Range("W2").Value) + 1 '//Sheet2に記録しているパネル開封数のカウンタを+1する
+                                                                                     '//元の値に+1したものを新しい値としている
+                                                                                     '//ゲームクリアの判定に必要
+                        '////安全地帯を全部開いた場合////
+                        If Int(Sheet2.Range("W2").Value) >= Int(Sheet2.Range("W3").Value) Then  '//W2のセルに記録されていた開封数のカウンタが、
+                                                                                                '//W3のセルに記録していた。ボム無しセル総数以上になったら
+
+                            'ゲームクリア処理
+                            Call game_End  '//ゲームクリア処理の関数を呼び出し
+                            GoTo EXT  '//この関数は終了する
+                            
+                        '/////周囲の爆弾の数が0の場合/////　'//ここがムズめです
+                        ElseIf Target.Value = 0 Then
+                            
+                            '//For文はループ処理
+                            For i = -1 To 1  '//変数iを-1から1ループごとに+1して実行していきます 1まで なので-1 0 1と3回繰り返し動作してます
+                                For j = -1 To 1  '//jでも同様に3回ループするようにしてます　2重ループ処理で合計9回ループしてます。
+                                                 '//　1回目　i = -1, j = -1
+                                                 '//　2回目　i = -1, j =  0
+                                                 '//　3回目　i = -1, j =  1
+                                                 '//　4回目　i =  0, j = -1
+                                                 '//　5回目　i =  0, j =  0
+                                                 '//　6回目　i =  0, j =  1
+                                                 '//　7回目　i =  1, j = -1
+                                                 '//　8回目　i =  1, j =  0
+                                                 '//　9回目　i =  1, j =  1
+                                                 
+                                    '//再帰呼び出し
+                                    Call Worksheet_SelectionChange(Target.Offset(i, j)) '//Targetの周囲9マスをクリックしたことにして
+                                                                                        '//再度この関数を呼び出して実行する
+                                                                                        '//Offset(i,j)でiとjだけ行と列をずらしたTargetをつくり
+                                                                                        '//それをWorksheet_SelectionChange関数に渡して実行している
+                                Next '//For～NextがFor文の文型
+                            Next
+                        End If '//If～End IfがIf文の文型
+                    End If
+                End If
+            End If
+        End If
+    End If
+
+EXT:
+
+End Sub
+
+'//右クリックが入力されたことを検出する関数
+
+Function CLI_Right() As Boolean '//右クリックされたら値が "True"になります
+    Const rig = -32768  '//変数rig の初期値を設定しています。GetAsyncKeyStateは入力を受けて10000000を返すためその値を定数にする。
+    CLI_Right = (GetAsyncKeyState(vbKeyRButton) And rig) = rig  '//なぜ定数を二回使う文型なのかは不明。GetAsyncKeyStateはWindowsのAPIを利用したもので
+                                                                '//vbKeyRButton(右クリック）が入力されるとCLI_Rightの値がTrueになるらしい。
+End Function
+
+
+'//右クリックしたときの処理
+
+Private Sub Worksheet_BeforeRightClick(ByVal Target As Range, Cancel As Boolean)  '//右クリックされると始動する専用の関数
+                                                                                  '//このゲームの主関数であるWorksheet_SelectionChangeのほうが
+                                                                                  '//先に適用されてしまうらしく、主関数では右クリックされても
+                                                                                  '//何も動作しないようにひとつ上のCLI_Right関数をつくる必要があった
+    '//ゲーム画面内を右クリックされた場合、
+    If Target.Row > 1 And Target.Row < 22 Then  '//Target.Rowは選択されたセルの行番号　もしTargetがゲーム画面内なら
+        If Target.Column > 1 And Target.Column < 22 Then  '//Columnは列番号、クリックしたセルがゲーム画面内なら以下を実行する
+
+            Call right_click(Target) '//右クリックされたあとの処理をする関数を呼び出す
+            
+        End If
+    End If
+End Sub
+
+'//右クリックがされたあとの処理をする関数
+
+Private Sub right_click(ByVal Target As Range)
+
+    If Target.Interior.ColorIndex <> 15 Then  '//グレー色でなければ（すでに左クリックで開かれたセルを除外する）
+        If Target.Value = "" Then             '//選択セルが空欄なら
+            Target.Interior.ColorIndex = 3    '//セルを赤色にして
+            Target.Value = "*"                '//* をつける
+        ElseIf Target.Value = "*" Then        '//* が既についていたら、
+            Target.Value = "-"                '//- に変更する
+            Target.Interior.ColorIndex = 6    '//セルも黄色に
+        ElseIf Target.Value = "-" Then        '//- が既についていたら
+            Target.Interior.ColorIndex = 2    '//セルを白色にして
+            Target.Value = ""                 '//空欄に戻す
+        End If
+    End If
+    
+End Sub
+
+
+'**************************
+'対象セルの周囲の爆弾の数を返す関数
+'Sub Worksheet_SelectionChangeより呼び出される。
+'
+'Target=検索範囲の中心セル
+'**************************
+
+Private Function bomb_check(ByVal Target As Range) As Integer  '//ボムチェック関数 Sheet2のTargetの座標を渡される
+
+    Dim cnt As Integer  '//ボムチェックのカウンタを宣言
+    Dim i As Integer
+    Dim j As Integer
+
+    cnt = 0  '//カウンタの初期化
+
+    '//二重For文で周囲9マスに対してループ処理を行う
+    For i = -1 To 1
+        For j = -1 To 1
+            If Target.Offset(i, j).Value = "●" Then  '//Sheet2のTargetの周囲マスが●であるかどうか
+               cnt = cnt + 1  '//●だったらカウンタを+1する
+            End If
+        Next
+    Next
+
+    bomb_check = cnt  '//ボムチェックの変数にカウンタの数字を代入する
+
+End Function
+
+'//ゲームオーバー処理
+Private Sub game_over(ByVal act As Range)
+    MsgBox ("Game Over...")  '//メッセージを出す
+End Sub
+
+'//ゲームクリア処理
+Private Sub game_End()
+    MsgBox ("Congratulations!! " & Chr(13) & " Game Clear!!")  '//" & Chr(13) & "は改行のこと
+End Sub
+
+
+Declare PtrSafe Function GetAsyncKeyState Lib "User32.dll" (ByVal vKey As Long) As Integer
+
+'//エクセルシートを開いたときに発動する 右クリックでメニューが開かないようにする処理
+Sub Auto_Open()
+    Application.CommandBars("Cell").Enabled = False
+End Sub
+
+'//エクセルシートを閉じるときに発動する 右クリックでメニューが開くようにする処理
+Sub Auto_Close()
+    Application.CommandBars("Cell").Enabled = True
+End Sub
+
+
+Sub 画面クリア()  '//ゲーム画面を白色空欄に戻す処理　クリアのボタンに登録してあり、ボタン押下で発動する
+
+'
+Application.EnableEvents = False  '//セル選択されても本体プログラムのWorksheet_SelectionChangeが発動しないようにする
+
+
+Range("B2:U21").ClearContents               '//ゲーム画面部分のValueをクリアする
+Range("B2:U21").Interior.ColorIndex = 2     '//白色にする
+
+Sheet2.Range("W2").Value = 0      '//Sheet2のパネル開封数カウンタをリセットする
+
+
+Range("X6").Select
+
+Dim text
+text = Range("Z6").Value    '//難易度データを拾ってくる
+Application.Run text        '//地雷マップを難易度を参考にしつつ再生成する
+
+Application.EnableEvents = True  '//Worksheet_SelectionChangeが発動するように戻す
+
+End Sub
+
+Sub 地雷初級()  '//地雷生成ボタンに登録されている
+    Dim n '//地雷数
+    n = 30
+
+    Call Mine_set(n, "地雷初級")  '//地雷数と難易度を渡してMine_setを呼び出す
+
+End Sub
+
+
+Sub 地雷中級()
+    Dim n '//地雷数
+    n = 50
+    
+    Call Mine_set(n, "地雷中級")
+
+End Sub
+Sub 地雷上級()
+    Dim n '//地雷数
+    n = 80
+    
+    Call Mine_set(n, "地雷上級")
+
+End Sub
+
+'//地雷をランダム設置する
+Sub Mine_set(n, text)
+
+    Application.EnableEvents = False   '//セル選択されても本体プログラムのWorksheet_SelectionChangeが発動しないようにする
+    Sheet2.Range("B2:U21").ClearContents    '//地雷データの部分のValueをクリアする
+
+    Dim i
+    Dim x  '//行番号の変数
+    Dim y  '//列番号の変数
+
+    For i = 1 To n
+        Randomize '//乱数のリセット
+
+        x = Int(20 * Rnd + 2)  '//2～21の整数の乱数を生成して代入する　Int()はかっこ内を小数点切り捨てて整数値にする　Rndは0～1の間の小数で乱数の値
+        y = Int(20 * Rnd + 2)
+    
+        If Sheet2.Cells(x, y).Value = "●" Then  '//セル(x,y) に、もしすでに●入っているならループカウンタのiをひとつ戻す
+            i = i - 1
+        End If
+    
+        Sheet2.Cells(x, y).Value = "●"  '//ランダムな座標(x,y)に●を入力する
+    
+    Next
+
+    Range("Z6").Value = text      '//難易度のテキストを入力
+    Sheet2.Range("W2").Value = 0  '//Sheet2のパネル開封数カウンタをリセットする
+    Range("X6").Select
+
+    Application.EnableEvents = True  '//Worksheet_SelectionChangeが発動するように戻す
+
+End Sub
